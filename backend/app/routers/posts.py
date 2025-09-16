@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
+from sqlalchemy import func
 from datetime import datetime
 from ..database import get_session
 from ..deps import auth_required
@@ -55,3 +56,12 @@ def publish_now(post_id: int, session: Session = Depends(get_session), user = De
     import asyncio
     asyncio.run(publish_post(session, post_id))
     return {"status": "triggered"}
+
+@router.get("/stats")
+def posts_stats(session: Session = Depends(get_session), user = Depends(auth_required)):
+    now = datetime.utcnow()
+    # Use SQL COUNT for efficiency
+    stmt = select(func.count()).select_from(Post).where(Post.status == "scheduled", Post.scheduled_at > now)
+    pending = session.exec(stmt).one()
+    # Normalize response
+    return {"pending": int(pending or 0), "now": now.isoformat() + "Z"}
