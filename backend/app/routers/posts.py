@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from sqlalchemy import func
-from datetime import datetime
+from datetime import datetime, timezone
 from ..database import get_session
 from ..deps import auth_required
 from ..models import Post
@@ -17,7 +17,12 @@ def list_posts(session: Session = Depends(get_session), user = Depends(auth_requ
 
 @router.post("/", response_model=PostRead)
 def create_post(data: PostCreate, session: Session = Depends(get_session), user = Depends(auth_required)):
-    post = Post(**data.model_dump(), status="scheduled")
+    payload = data.model_dump()
+    # Normalize scheduled_at to naive UTC for consistent storage/comparison
+    sa = payload.get("scheduled_at")
+    if isinstance(sa, datetime) and sa.tzinfo is not None:
+        payload["scheduled_at"] = sa.astimezone(timezone.utc).replace(tzinfo=None)
+    post = Post(**payload, status="scheduled")
     session.add(post)
     session.commit(); session.refresh(post)
     schedule_post(session, post)
@@ -33,7 +38,11 @@ def get_post(post_id: int, session: Session = Depends(get_session), user = Depen
 def update_post(post_id: int, data: PostUpdate, session: Session = Depends(get_session), user = Depends(auth_required)):
     post = session.get(Post, post_id)
     if not post: raise HTTPException(404, "Not found")
-    for k, v in data.model_dump(exclude_unset=True).items():
+    updates = data.model_dump(exclude_unset=True)
+    sa = updates.get("scheduled_at")
+    if isinstance(sa, datetime) and sa.tzinfo is not None:
+        updates["scheduled_at"] = sa.astimezone(timezone.utc).replace(tzinfo=None)
+    for k, v in updates.items():
         setattr(post, k, v)
     post.updated_at = datetime.utcnow()
     session.add(post); session.commit(); session.refresh(post)

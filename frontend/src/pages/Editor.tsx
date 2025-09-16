@@ -49,7 +49,9 @@ export default function Editor(){
 
   function toInputLocal(isoLike:string){
     // Normalize to Date then format as yyyy-MM-ddTHH:mm in local time for input[type=datetime-local]
-    const d = new Date(isoLike)
+    // Treat naive timestamps as UTC to avoid timezone drift
+    const needsZ = typeof isoLike === 'string' && isoLike && !/Z|[\+\-]\d{2}:?\d{2}$/.test(isoLike)
+    const d = new Date(needsZ ? isoLike + 'Z' : isoLike)
     const pad = (n:number)=> String(n).padStart(2,'0')
     const y = d.getFullYear()
     const m = pad(d.getMonth()+1)
