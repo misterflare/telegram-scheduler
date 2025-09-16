@@ -7,6 +7,9 @@ from ..schemas import SettingsRead, SettingsUpdate, PasswordChange, Token
 from ..auth import create_access_token, verify_password, get_password_hash
 from ..deps import auth_required
 from ..config import settings as env
+from pydantic import BaseModel
+from ..telegram_client import send_post
+import asyncio
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 
@@ -53,3 +56,22 @@ def change_password(body: PasswordChange, session: Session = Depends(get_session
     u.password_hash = get_password_hash(body.new_password)
     session.add(u); session.commit()
     return {"ok": True}
+
+class TestPostBody(BaseModel):
+    text: str | None = None
+
+@router.post("/test")
+async def test_post(body: TestPostBody, session: Session = Depends(get_session), user = Depends(auth_required)):
+    s = session.exec(select(AppSettings)).first()
+    token = (s and s.bot_token) or env.TELEGRAM_BOT_TOKEN
+    channel = (s and s.channel_id) or env.TELEGRAM_CHANNEL_ID
+    if not token:
+        raise HTTPException(400, "Токен бота не задан. Укажите его в настройках.")
+    if not channel:
+        raise HTTPException(400, "ID/юзернейм канала не задан. Укажите его в настройках.")
+    text = body.text or "Тестовое сообщение от Telegram Scheduler"
+    try:
+        await send_post(text, None, None, channel, token=token)
+        return {"ok": True}
+    except Exception as e:
+        raise HTTPException(400, f"Не удалось отправить: {str(e)[:300]}")

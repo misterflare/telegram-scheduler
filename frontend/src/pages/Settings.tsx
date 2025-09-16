@@ -7,6 +7,7 @@ export default function Settings(){
   const [oldPass,setOldPass]=useState('')
   const [newPass,setNewPass]=useState('')
   const [show,setShow]=useState(false)
+  const [testText,setTestText]=useState('Проверка постинга: это тестовое сообщение')
 
   async function load(){
     const res = await api('/settings/')
@@ -26,6 +27,16 @@ export default function Settings(){
     await api('/settings/password', { method:'POST', body: JSON.stringify({ old_password: oldPass, new_password: newPass, new_password_confirm: confirm }) })
     setOldPass(''); setNewPass(''); (document.getElementById('confirm') as HTMLInputElement).value=''
     alert('Пароль обновлён')
+  }
+
+  async function testPosting(){
+    const res = await api('/settings/test', { method:'POST', body: JSON.stringify({ text: testText }) })
+    if(res.ok){
+      alert('Тестовое сообщение отправлено')
+    } else {
+      const t = await res.text().catch(()=> '')
+      alert('Не удалось отправить: ' + t)
+    }
   }
 
   return (
@@ -53,6 +64,13 @@ export default function Settings(){
           <label className="text-sm flex items-center gap-1"><input type="checkbox" onChange={e=>setShow(e.target.checked)} /> показать</label>
         </div>
         <button onClick={changePass} className="border rounded px-4 py-2">Обновить пароль</button>
+      </div>
+
+      <div className="bg-white p-4 rounded-2xl shadow space-y-3">
+        <label className="block text-sm font-medium">Проверка постинга</label>
+        <textarea value={testText} onChange={e=>setTestText(e.target.value)} rows={3} className="w-full border rounded p-2" />
+        <button onClick={testPosting} className="border rounded px-4 py-2">Отправить</button>
+        <div className="text-xs text-gray-500">Будет отправлено в канал, указанный выше. Убедитесь, что бот добавлен администратором.</div>
       </div>
     </div>
   )

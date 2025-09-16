@@ -4,15 +4,18 @@ from telegram import Bot, InputMediaPhoto, InputMediaVideo, InlineKeyboardButton
 from .config import settings
 
 _bot: Optional[Bot] = None
+_bot_token: Optional[str] = None
 
-def get_bot() -> Bot:
-    global _bot
-    if _bot is None:
-        _bot = Bot(token=settings.TELEGRAM_BOT_TOKEN)
+def get_bot(token: Optional[str] = None) -> Bot:
+    global _bot, _bot_token
+    desired = token or settings.TELEGRAM_BOT_TOKEN
+    if _bot is None or (_bot_token != desired):
+        _bot = Bot(token=desired)
+        _bot_token = desired
     return _bot
 
-async def send_post(text: Optional[str], buttons: Optional[List[dict]], media: Optional[List[dict]], chat_id: str):
-    bot = get_bot()
+async def send_post(text: Optional[str], buttons: Optional[List[dict]], media: Optional[List[dict]], chat_id: str, token: Optional[str] = None):
+    bot = get_bot(token)
 
     # Build inline keyboard
     reply_markup = None

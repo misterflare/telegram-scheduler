@@ -15,7 +15,7 @@ async def publish_post(session: Session, post_id: int):
         session.add(post); session.commit()
         return
     try:
-        await send_post(post.text, post.buttons, post.media, settings.channel_id)
+        await send_post(post.text, post.buttons, post.media, settings.channel_id, token=settings.bot_token)
         post.status = "posted"
         post.error = None
     except Exception as e:
