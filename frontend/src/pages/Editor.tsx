@@ -38,12 +38,33 @@ export default function Editor(){
   }
 
   async function save(){
+    if(!scheduledAt){ alert('Укажите дату и время публикации'); return }
     const payload:any = { text, buttons, media, scheduled_at: new Date(scheduledAt).toISOString() }
     const res = await api(id?`/posts/${id}`:'/posts/', { method: id?'PUT':'POST', body: JSON.stringify(payload) })
     if(res.ok){
       nav('/posts')
     } else {
       try { const err = await res.text(); alert(`Не удалось сохранить: ${err}`) } catch { alert('Не удалось сохранить пост') }
+    }
+  }
+
+  async function publishNow(){
+    // Ensure saved, then trigger publish-now
+    if(!id){
+      if(!scheduledAt){ alert('Укажите дату/время, или сохраните без него'); return }
+      const payload:any = { text, buttons, media, scheduled_at: new Date(scheduledAt).toISOString() }
+      const res = await api('/posts/', { method:'POST', body: JSON.stringify(payload) })
+      if(!res.ok){ try { const t=await res.text(); alert(`Не удалось сохранить: ${t}`) } catch { alert('Не удалось сохранить пост') }; return }
+      const created = await res.json()
+      await api(`/posts/${created.id}/publish-now`, { method:'POST' })
+      nav('/posts')
+    } else {
+      // Save latest edits first
+      const payload:any = { text, buttons, media, scheduled_at: new Date(scheduledAt).toISOString() }
+      const res = await api(`/posts/${id}`, { method:'PUT', body: JSON.stringify(payload) })
+      if(!res.ok){ try { const t=await res.text(); alert(`Не удалось сохранить: ${t}`) } catch { alert('Не удалось сохранить пост') }; return }
+      await api(`/posts/${id}/publish-now`, { method:'POST' })
+      nav('/posts')
     }
   }
 
@@ -100,6 +121,7 @@ export default function Editor(){
 
       <div className="flex gap-2">
         <button onClick={save} className="bg-black text-white rounded px-4 py-2">Сохранить</button>
+        <button onClick={publishNow} className="border rounded px-4 py-2">Опубликовать сейчас</button>
         <button onClick={()=>nav('/posts')} className="border rounded px-4 py-2">Отмена</button>
       </div>
     </div>

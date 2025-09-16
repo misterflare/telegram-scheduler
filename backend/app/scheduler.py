@@ -17,6 +17,12 @@ def start_scheduler():
     scheduler.start()
     return scheduler
 
+def run_publish_job(post_id: int):
+    # Executed by APScheduler in a fresh context; open a new DB session.
+    with Session(engine) as session:
+        asyncio.run(publish_post(session, post_id))
+
+
 def schedule_post(session: Session, post: Post):
     sched = start_scheduler()
     job_id = f"post_{post.id}"
@@ -27,7 +33,7 @@ def schedule_post(session: Session, post: Post):
         pass
 
     if post.status == "scheduled" and post.scheduled_at > datetime.utcnow():
-        sched.add_job(lambda: asyncio.run(publish_post(session, post.id)), trigger="date", run_date=post.scheduled_at, id=job_id, replace_existing=True)
+        sched.add_job(run_publish_job, args=[post.id], trigger="date", run_date=post.scheduled_at, id=job_id, replace_existing=True)
 
 def bootstrap_pending(session: Session):
     # Schedule all future scheduled posts on startup
