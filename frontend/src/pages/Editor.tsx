@@ -1,0 +1,89 @@
+import { useEffect, useState } from 'react'
+import { api } from '../lib/api'
+import { useNavigate, useParams } from 'react-router-dom'
+import ButtonLinkRow from '../components/ButtonLinkRow'
+
+export default function Editor(){
+  const { id } = useParams()
+  const nav = useNavigate()
+  const [text,setText]=useState('')
+  const [scheduledAt,setScheduledAt]=useState('')
+  const [buttons,setButtons]=useState<{title:string,url:string}[]>([])
+  const [media,setMedia]=useState<{type:string,path:string}[]>([])
+  const [pendingFiles,setPendingFiles]=useState<FileList|null>(null)
+
+  useEffect(()=>{ if(id) fetchPost() },[id])
+  async function fetchPost(){
+    const res = await api(`/posts/${id}`); const p = await res.json()
+    setText(p.text||''); setScheduledAt(p.scheduled_at.substring(0,16)); setButtons(p.buttons||[]); setMedia(p.media||[])
+  }
+
+  async function uploadFiles(){
+    if(!pendingFiles) return
+    const form = new FormData()
+    Array.from(pendingFiles).forEach(f=> form.append('files', f))
+    const token = localStorage.getItem('token')
+    const res = await fetch(((import.meta.env.VITE_API_BASE as string)||'/api') + '/files/upload', { method:'POST', headers:{ 'Authorization': `Bearer ${token}` }, body: form })
+    const data = await res.json()
+    const mapped = data.files.map((f:any)=>({ type: guessType(f.filename), path: f.path }))
+    setMedia([...media, ...mapped])
+    setPendingFiles(null)
+  }
+
+  function guessType(name:string){
+    const ext = name.split('.').pop()?.toLowerCase() || ''
+    if(['jpg','jpeg','png','webp'].includes(ext)) return 'photo'
+    if(['mp4','mov','mkv','webm'].includes(ext)) return 'video'
+    return 'document'
+  }
+
+  async function save(){
+    const payload:any = { text, buttons, media, scheduled_at: new Date(scheduledAt).toISOString() }
+    const res = await api(id?`/posts/${id}`:'/posts/', { method: id?'PUT':'POST', body: JSON.stringify(payload) })
+    if(res.ok) nav('/posts')
+  }
+
+  return (
+    <div className="space-y-4">
+      <h1 className="text-xl font-semibold">{id? 'Редактирование поста' : 'Создать пост'}</h1>
+
+      <div className="bg-white p-4 rounded-2xl shadow space-y-3">
+        <label className="block text-sm font-medium">Текст</label>
+        <textarea value={text} onChange={e=>setText(e.target.value)} rows={6} className="w-full border rounded p-2" placeholder="Напишите текст, можно с эмодзи 😊" />
+      </div>
+
+      <div className="bg-white p-4 rounded-2xl shadow space-y-3">
+        <label className="block text-sm font-medium">Медиафайлы</label>
+        <input type="file" multiple onChange={e=>setPendingFiles(e.target.files)} />
+        <button onClick={uploadFiles} className="border rounded px-3 py-1">Загрузить</button>
+        {media.length>0 && (
+          <ul className="text-sm text-gray-700 list-disc pl-5">
+            {media.map((m,i)=> <li key={i}>{m.type} — {m.path.split('/').pop()}</li>)}
+          </ul>
+        )}
+      </div>
+
+      <div className="bg-white p-4 rounded-2xl shadow space-y-2">
+        <div className="flex justify-between items-center">
+          <label className="text-sm font-medium">Кнопки со ссылками</label>
+          <button className="border rounded px-2 py-1" onClick={()=>setButtons([...buttons,{title:'',url:''}])}>+</button>
+        </div>
+        <div className="space-y-2">
+          {buttons.map((b,i)=> (
+            <ButtonLinkRow key={i} value={b} onChange={v=>{ const arr=[...buttons]; arr[i]=v; setButtons(arr) }} onRemove={()=>{ const arr=[...buttons]; arr.splice(i,1); setButtons(arr) }} />
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-white p-4 rounded-2xl shadow space-y-3">
+        <label className="block text-sm font-medium">Дата и время публикации</label>
+        <input type="datetime-local" value={scheduledAt} onChange={e=>setScheduledAt(e.target.value)} className="border rounded px-2 py-1" />
+      </div>
+
+      <div className="flex gap-2">
+        <button onClick={save} className="bg-black text-white rounded px-4 py-2">Сохранить</button>
+        <button onClick={()=>nav('/posts')} className="border rounded px-4 py-2">Отмена</button>
+      </div>
+    </div>
+  )
+}
