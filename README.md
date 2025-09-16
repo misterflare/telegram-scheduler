@@ -21,7 +21,7 @@ docker --version && docker compose version
 ## Развёртывание
 
 ```bash
-git clone https://github.com/<yourname>/telegram-scheduler.git
+git clone https://github.com/misterflare/telegram-scheduler.git
 cd telegram-scheduler
 cp .env.template .env
 nano .env  # заполните JWT_SECRET, ADMIN_*, TELEGRAM_*
