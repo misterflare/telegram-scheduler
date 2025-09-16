@@ -15,7 +15,7 @@ export default function Editor(){
   useEffect(()=>{ if(id) fetchPost() },[id])
   async function fetchPost(){
     const res = await api(`/posts/${id}`); const p = await res.json()
-    setText(p.text||''); setScheduledAt(p.scheduled_at.substring(0,16)); setButtons(p.buttons||[]); setMedia(p.media||[])
+    setText(p.text||''); setScheduledAt(toInputLocal(p.scheduled_at)); setButtons(p.buttons||[]); setMedia(p.media||[])
   }
 
   async function uploadFiles(){
@@ -40,7 +40,23 @@ export default function Editor(){
   async function save(){
     const payload:any = { text, buttons, media, scheduled_at: new Date(scheduledAt).toISOString() }
     const res = await api(id?`/posts/${id}`:'/posts/', { method: id?'PUT':'POST', body: JSON.stringify(payload) })
-    if(res.ok) nav('/posts')
+    if(res.ok){
+      nav('/posts')
+    } else {
+      try { const err = await res.text(); alert(`Не удалось сохранить: ${err}`) } catch { alert('Не удалось сохранить пост') }
+    }
+  }
+
+  function toInputLocal(isoLike:string){
+    // Normalize to Date then format as yyyy-MM-ddTHH:mm in local time for input[type=datetime-local]
+    const d = new Date(isoLike)
+    const pad = (n:number)=> String(n).padStart(2,'0')
+    const y = d.getFullYear()
+    const m = pad(d.getMonth()+1)
+    const day = pad(d.getDate())
+    const hh = pad(d.getHours())
+    const mm = pad(d.getMinutes())
+    return `${y}-${m}-${day}T${hh}:${mm}`
   }
 
   return (

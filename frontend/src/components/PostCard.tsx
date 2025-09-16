@@ -1,5 +1,5 @@
 export default function PostCard({post, onEdit, onDelete}:{post:any; onEdit:()=>void; onDelete:()=>void}){
-  const dt = new Date(post.scheduled_at)
+  const dt = parseUtc(post.scheduled_at)
   return (
     <div className="bg-white rounded-2xl shadow p-4 flex gap-4 items-start">
       <div className="flex-1">
@@ -25,4 +25,13 @@ export default function PostCard({post, onEdit, onDelete}:{post:any; onEdit:()=>
       </div>
     </div>
   )
+}
+
+function parseUtc(value:string){
+  // If backend returns naive ISO without timezone, treat it as UTC by appending 'Z'
+  // so it renders correctly in local time with toLocaleString().
+  if(typeof value === 'string' && value && !/Z|[\+\-]\d{2}:?\d{2}$/.test(value)){
+    return new Date(value + 'Z')
+  }
+  return new Date(value)
 }
