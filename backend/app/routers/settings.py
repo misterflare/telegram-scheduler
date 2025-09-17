@@ -1,8 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session, select
-from sqlalchemy import text
-from sqlalchemy.exc import OperationalError
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from pydantic import BaseModel
 
@@ -13,6 +11,7 @@ from ..auth import create_access_token, verify_password, get_password_hash
 from ..deps import auth_required
 from ..config import settings as env
 from ..telegram_client import send_post
+from ..utils.settings_migration import ensure_timezone_column
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 
@@ -28,19 +27,8 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), session: Sessi
     return Token(access_token=token)
 
 
-def _ensure_timezone_column(session: Session) -> None:
-    try:
-        session.exec(select(AppSettings.timezone)).first()
-    except OperationalError as exc:
-        if "no such column" in str(exc) and "timezone" in str(exc):
-            session.exec(text("ALTER TABLE appsettings ADD COLUMN timezone VARCHAR(64)"))
-            session.commit()
-        else:
-            raise
-
-
 def _get_settings_row(session: Session) -> AppSettings:
-    _ensure_timezone_column(session)
+    ensure_timezone_column(session)
     settings_row = session.exec(select(AppSettings)).first()
     if not settings_row:
         settings_row = AppSettings(
