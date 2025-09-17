@@ -1,4 +1,6 @@
-﻿from typing import Any, BinaryIO, List, Optional, Tuple
+﻿from typing import Any, BinaryIO, Dict, List, Optional, Tuple
+
+import asyncio
 
 from telegram import (
     Bot,
@@ -17,31 +19,33 @@ except ImportError:  # pragma: no cover
 
 from .config import settings
 
-_bot: Optional[Bot] = None
+_bots: Dict[int, Bot] = {}
 _bot_token: Optional[str] = None
-_request: Optional[HTTPXRequest] = None
 
 
-def _get_request() -> HTTPXRequest:
-    global _request
-    if _request is None:
-        _request = HTTPXRequest(
-            connect_timeout=20.0,
-            read_timeout=60.0,
-            write_timeout=60.0,
-            pool_timeout=30.0,
-            connection_pool_size=20,
-        )
-    return _request
+def _build_request() -> HTTPXRequest:
+    return HTTPXRequest(
+        connect_timeout=20.0,
+        read_timeout=60.0,
+        write_timeout=60.0,
+        pool_timeout=30.0,
+        connection_pool_size=20,
+    )
 
 
 def get_bot(token: Optional[str] = None) -> Bot:
-    global _bot, _bot_token
+    global _bot_token
     desired = token or settings.TELEGRAM_BOT_TOKEN
-    if _bot is None or (_bot_token != desired):
-        _bot = Bot(token=desired, request=_get_request())
+    if _bot_token != desired:
         _bot_token = desired
-    return _bot
+        _bots.clear()
+    loop = asyncio.get_running_loop()
+    key = id(loop)
+    bot = _bots.get(key)
+    if bot is None:
+        bot = Bot(token=desired, request=_build_request())
+        _bots[key] = bot
+    return bot
 
 
 def _build_keyboard(buttons: Optional[List[dict]]) -> Optional[InlineKeyboardMarkup]:
