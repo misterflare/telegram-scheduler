@@ -6,7 +6,7 @@ from sqlmodel import Session, select
 from .config import settings
 from .database import init_db, engine
 from .models import User, AppSettings
-from .auth import get_password_hash
+from .auth import get_password_hash, verify_password
 from .scheduler import start_scheduler, bootstrap_pending
 from .routers import posts, files, settings as settings_router
 
@@ -30,6 +30,9 @@ def startup():
         if not u:
             u = User(username=settings.ADMIN_USERNAME, password_hash=get_password_hash(settings.ADMIN_PASSWORD))
             session.add(u); session.commit()
+        elif settings.ADMIN_PASSWORD and not verify_password(settings.ADMIN_PASSWORD, u.password_hash):
+            u.password_hash = get_password_hash(settings.ADMIN_PASSWORD)
+            session.add(u); session.commit()
         s = session.exec(select(AppSettings)).first()
         if not s:
             s = AppSettings(id=1, bot_token=settings.TELEGRAM_BOT_TOKEN, channel_id=settings.TELEGRAM_CHANNEL_ID)
@@ -45,3 +48,6 @@ app.include_router(posts.router)
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+
