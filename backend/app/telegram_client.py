@@ -105,6 +105,7 @@ async def send_post(
 ) -> None:
     bot = get_bot(token)
     reply_markup = _build_keyboard(buttons)
+    caption = (text or None)
     message_text = text if text else (" " if reply_markup else "")
 
     attachments = [item for item in media or [] if item.get("path")]
@@ -113,31 +114,38 @@ async def send_post(
         media_group = []
         cleanup: List[BinaryIO] = []
         try:
-            for item in attachments:
+            for index, item in enumerate(attachments):
                 path = item["path"]
                 file_obj, to_close = _wrap_file(path)
                 if to_close is not None:
                     cleanup.append(to_close)
                 media_type = item.get("type")
+                caption_arg = caption if index == 0 and caption else None
                 if media_type == "photo":
-                    media_group.append(InputMediaPhoto(media=file_obj))
+                    media_group.append(InputMediaPhoto(media=file_obj, caption=caption_arg))
                 elif media_type == "video":
-                    media_group.append(InputMediaVideo(media=file_obj))
+                    media_group.append(InputMediaVideo(media=file_obj, caption=caption_arg))
                 else:
-                    media_group.append(InputMediaDocument(media=file_obj))
+                    media_group.append(InputMediaDocument(media=file_obj, caption=caption_arg))
             if media_group:
                 await bot.send_media_group(chat_id=chat_id, media=media_group)
-                if message_text or reply_markup:
+                if reply_markup:
+                    extra_text = " " if caption else (message_text or " ")
+                    await bot.send_message(
+                        chat_id=chat_id,
+                        text=extra_text,
+                        reply_markup=reply_markup,
+                        disable_web_page_preview=True,
+                    )
+                elif not caption and message_text.strip():
                     await bot.send_message(
                         chat_id=chat_id,
                         text=message_text,
-                        reply_markup=reply_markup,
                         disable_web_page_preview=True,
                     )
             return
         finally:
             _cleanup_files(cleanup)
-
     if len(attachments) == 1:
         item = attachments[0]
         path = item["path"]
