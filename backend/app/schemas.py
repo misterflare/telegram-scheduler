@@ -41,10 +41,12 @@ class PostUpdate(BaseModel):
 class SettingsRead(BaseModel):
     bot_token: Optional[str] = None
     channel_id: Optional[str] = None
+    timezone: Optional[str] = None
 
 class SettingsUpdate(BaseModel):
     bot_token: Optional[str] = None
     channel_id: Optional[str] = None
+    timezone: Optional[str] = None
 
 class PasswordChange(BaseModel):
     old_password: str

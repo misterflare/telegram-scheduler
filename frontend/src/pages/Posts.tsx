@@ -7,6 +7,7 @@ export default function Posts(){
   const [items,setItems]=useState<any[]>([])
   const [pending,setPending]=useState<number>(0)
   const [serverNow,setServerNow]=useState<string>("")
+  const [serverTz,setServerTz]=useState<string>("")
   const nav = useNavigate()
   async function load(){
     const res = await api('/posts/')
@@ -18,6 +19,7 @@ export default function Posts(){
       const s = await res.json()
       setPending(s.pending)
       setServerNow(s.now)
+      setServerTz(s.timezone || '')
     }
   }
   useEffect(()=>{
@@ -34,18 +36,18 @@ export default function Posts(){
   return (
     <div className="space-y-3">
       <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-md p-2">
-        <span className="font-medium">Ожидает публикации:</span> {pending}
-        <span className="mx-2">•</span>
-        <span className="font-medium">Текущее время:</span> {serverNow ? new Date(serverNow).toLocaleString() : new Date().toLocaleString()}
+        <span className="font-medium">Запланировано постов:</span> {pending}
+        <span className="mx-2">|</span>
+        <span className="font-medium">Текущее время{serverTz ? ` (${serverTz})` : ''}:</span> {serverNow ? new Date(serverNow).toLocaleString() : new Date().toLocaleString()}
       </div>
       <div className="flex justify-between items-center">
-        <h1 className="text-xl font-semibold">Текущие/запланированные посты</h1>
-        <button className="border rounded px-3 py-2" onClick={()=>nav('/editor')}>+ Создать пост</button>
+        <h1 className="text-xl font-semibold">Запланированные публикации</h1>
+        <button className="border rounded px-3 py-2" onClick={()=>nav('/editor')}>+ Новый пост</button>
       </div>
       {items.map(p=> (
         <PostCard key={p.id} post={p} onEdit={()=>nav(`/editor/${p.id}`)} onDelete={()=>remove(p.id)} />
       ))}
-      {items.length===0 && <div className="text-gray-500">Постов пока нет.</div>}
+      {items.length===0 && <div className="text-gray-500">Пока ничего не запланировано.</div>}
     </div>
   )
 }

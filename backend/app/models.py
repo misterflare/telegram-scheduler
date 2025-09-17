@@ -11,6 +11,7 @@ class AppSettings(SQLModel, table=True):
     id: Optional[int] = Field(default=1, primary_key=True)
     bot_token: Optional[str] = None
     channel_id: Optional[str] = None
+    timezone: Optional[str] = None
 
 class Post(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
