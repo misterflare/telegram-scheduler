@@ -1,4 +1,4 @@
-import os
+﻿import os
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from sqlalchemy import func
@@ -44,7 +44,7 @@ def create_post(data: PostCreate, session: Session = Depends(get_session), user=
     if not isinstance(sa, datetime):
         raise HTTPException(400, "scheduled_at is required")
     if sa <= datetime.utcnow():
-        raise HTTPException(400, "Publish time must be in the future")
+        raise HTTPException(400, "Дата и время должны быть в будущем")
     post = Post(**payload, status="scheduled")
     session.add(post)
     session.commit()
@@ -79,7 +79,7 @@ def update_post(post_id: int, data: PostUpdate, session: Session = Depends(get_s
         if not isinstance(sa, datetime):
             raise HTTPException(400, "scheduled_at is required")
         if sa <= datetime.utcnow():
-            raise HTTPException(400, "Publish time must be in the future")
+            raise HTTPException(400, "Дата и время должны быть в будущем")
         scheduled_changed = (sa != original_scheduled)
     for k, v in updates.items():
         setattr(post, k, v)
