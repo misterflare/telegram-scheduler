@@ -30,7 +30,7 @@ def _get_request() -> HTTPXRequest:
             read_timeout=60.0,
             write_timeout=60.0,
             pool_timeout=30.0,
-            max_connections=20,
+            connection_pool_size=20,
         )
     return _request
 
