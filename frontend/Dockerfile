@@ -1,11 +1,12 @@
-FROM node:20 as build
+﻿FROM node:20 AS build
 WORKDIR /app
 COPY package.json package-lock.json* yarn.lock* pnpm-lock.yaml* ./
 RUN npm ci || yarn || pnpm i
 COPY . .
 RUN npm run build || yarn build || pnpm build
 
-FROM nginx:alpine
+FROM nginx:1.29-alpine
 COPY --from=build /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/nginx.conf
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
