@@ -6,6 +6,7 @@ COPY . .
 RUN npm run build || yarn build || pnpm build
 
 FROM nginx:1.29-alpine
+RUN rm /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/nginx.conf
 EXPOSE 80
