@@ -1,3 +1,4 @@
+import os
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from sqlalchemy import func
@@ -7,7 +8,7 @@ from ..database import get_session
 from ..deps import auth_required
 from ..models import Post
 from ..schemas import PostCreate, PostRead, PostUpdate
-from ..scheduler import schedule_post
+from ..scheduler import schedule_post, cancel_post_job
 from ..telegram_client import normalize_button_url
 from ..utils.timezone import resolve_timezone
 
@@ -98,8 +99,16 @@ def delete_post(post_id: int, session: Session = Depends(get_session), user=Depe
     post = session.get(Post, post_id)
     if not post:
         raise HTTPException(404, "Not found")
-    post.status = "canceled"
-    session.add(post)
+    cancel_post_job(post_id)
+    attachments = post.media or []
+    for item in attachments:
+        path = item.get("path") if isinstance(item, dict) else None
+        if path and os.path.isfile(path):
+            try:
+                os.remove(path)
+            except Exception:
+                pass
+    session.delete(post)
     session.commit()
     return {"ok": True}
 

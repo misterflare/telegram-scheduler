@@ -56,3 +56,12 @@ def schedule_post(session: Session, post: Post):
 def bootstrap_pending(session: Session):
     for post in session.exec(select(Post).where(Post.status == "scheduled", Post.scheduled_at > datetime.utcnow())).all():
         schedule_post(session, post)
+
+
+def cancel_post_job(post_id: int):
+    sched = start_scheduler()
+    job_id = f"post_{post_id}"
+    try:
+        sched.remove_job(job_id)
+    except Exception:
+        pass
