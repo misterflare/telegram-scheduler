@@ -1,12 +1,14 @@
-{
-  auto_https off
+﻿{
+  email {$ACME_EMAIL:admin@example.com}
 }
 
-:80 {
+{$SITE_DOMAIN:localhost} {
   handle_path /api/* {
     uri strip_prefix /api
     reverse_proxy backend:8000
   }
 
-  reverse_proxy frontend:80
+  handle {
+    reverse_proxy frontend:80
+  }
 }
