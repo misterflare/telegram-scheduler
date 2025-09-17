@@ -8,7 +8,20 @@ from ..deps import auth_required
 from ..models import Post
 from ..schemas import PostCreate, PostRead, PostUpdate
 from ..scheduler import schedule_post
+from ..telegram_client import normalize_button_url
 from ..utils.timezone import resolve_timezone
+
+def _sanitize_buttons(buttons: list[dict] | None) -> list[dict] | None:
+    if not buttons:
+        return None
+    sanitized: list[dict] = []
+    for btn in buttons:
+        title = (btn.get('title') or '').strip()
+        url = normalize_button_url(btn.get('url'))
+        if title and url:
+            sanitized.append({'title': title, 'url': url})
+    return sanitized or None
+
 
 router = APIRouter(prefix="/posts", tags=["posts"])
 
@@ -22,6 +35,7 @@ def list_posts(session: Session = Depends(get_session), user=Depends(auth_requir
 @router.post("/", response_model=PostRead)
 def create_post(data: PostCreate, session: Session = Depends(get_session), user=Depends(auth_required)):
     payload = data.model_dump()
+    payload["buttons"] = _sanitize_buttons(payload.get("buttons"))
     sa = payload.get("scheduled_at")
     if isinstance(sa, datetime) and sa.tzinfo is not None:
         payload["scheduled_at"] = sa.astimezone(timezone.utc).replace(tzinfo=None)
@@ -47,6 +61,8 @@ def update_post(post_id: int, data: PostUpdate, session: Session = Depends(get_s
     if not post:
         raise HTTPException(404, "Not found")
     updates = data.model_dump(exclude_unset=True)
+    if "buttons" in updates:
+        updates["buttons"] = _sanitize_buttons(updates.get("buttons"))
     sa = updates.get("scheduled_at")
     if isinstance(sa, datetime) and sa.tzinfo is not None:
         updates["scheduled_at"] = sa.astimezone(timezone.utc).replace(tzinfo=None)

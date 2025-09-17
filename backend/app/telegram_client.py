@@ -48,13 +48,33 @@ def _build_keyboard(buttons: Optional[List[dict]]) -> Optional[InlineKeyboardMar
     if not buttons:
         return None
     row = [
-        InlineKeyboardButton(btn["title"], url=btn["url"])
+        InlineKeyboardButton(title, url=url)
         for btn in buttons
-        if btn.get("title") and btn.get("url")
+        for title, url in [(btn.get("title"), normalize_button_url(btn.get("url")))]
+        if title and url
     ]
     if not row:
         return None
     return InlineKeyboardMarkup([row])
+
+
+def normalize_button_url(raw: str | None) -> Optional[str]:
+    if not raw:
+        return None
+    value = raw.strip()
+    if not value:
+        return None
+    lowered = value.lower()
+    if value.startswith('@'):
+        username = value.lstrip('@').strip()
+        return f'https://t.me/{username}' if username else None
+    if lowered.startswith(('http://', 'https://', 'tg://')):
+        return value
+    if lowered.startswith(('t.me/', 'telegram.me/', 'telegram.dog/')):
+        return f'https://{value}'
+    if lowered.startswith('www.'):
+        return f'https://{value}'
+    return f'https://{value}'
 
 
 def _wrap_file(path: str) -> Tuple[Any, Optional[BinaryIO]]:
