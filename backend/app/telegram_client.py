@@ -8,6 +8,7 @@ from telegram import (
     InputMediaPhoto,
     InputMediaVideo,
 )
+from telegram.request import HTTPXRequest
 
 try:
     from telegram import FSInputFile  # type: ignore[attr-defined]
@@ -18,13 +19,27 @@ from .config import settings
 
 _bot: Optional[Bot] = None
 _bot_token: Optional[str] = None
+_request: Optional[HTTPXRequest] = None
+
+
+def _get_request() -> HTTPXRequest:
+    global _request
+    if _request is None:
+        _request = HTTPXRequest(
+            connect_timeout=20.0,
+            read_timeout=60.0,
+            write_timeout=60.0,
+            pool_timeout=30.0,
+            max_connections=20,
+        )
+    return _request
 
 
 def get_bot(token: Optional[str] = None) -> Bot:
     global _bot, _bot_token
     desired = token or settings.TELEGRAM_BOT_TOKEN
     if _bot is None or (_bot_token != desired):
-        _bot = Bot(token=desired)
+        _bot = Bot(token=desired, request=_get_request())
         _bot_token = desired
     return _bot
 
